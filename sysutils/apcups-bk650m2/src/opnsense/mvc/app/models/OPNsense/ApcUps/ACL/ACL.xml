@@ -1,0 +1,10 @@
+<acl>
+    <page-services-apcups>
+        <name>WebCfg - Services: APC UPS BK650M2</name>
+        <description>Allow access to the APC UPS BK650M2 plugin</description>
+        <patterns>
+            <pattern>ui/apcups/*</pattern>
+            <pattern>api/apcups/*</pattern>
+        </patterns>
+    </page-services-apcups>
+</acl>

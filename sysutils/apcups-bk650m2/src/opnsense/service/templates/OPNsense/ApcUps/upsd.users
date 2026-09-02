@@ -1,0 +1,10 @@
+[{{ OPNsense.ApcUps.general.monitorUser|default("monuser") }}]
+    password = {{ OPNsense.ApcUps.general.monitorPassword|default("apcupsbk650m2") }}
+    upsmon master
+{% if helpers.exists('OPNsense.ApcUps.general.serverEnabled') and OPNsense.ApcUps.general.serverEnabled == '1' and OPNsense.ApcUps.general.serverPassword|default("") != "" %}
+# Read-only account for LAN secondaries monitoring this UPS
+# (MONITOR upsname@this-host 1 user pass slave).
+[{{ OPNsense.ApcUps.general.serverUser|default("upsclient") }}]
+    password = {{ OPNsense.ApcUps.general.serverPassword }}
+    upsmon slave
+{% endif %}

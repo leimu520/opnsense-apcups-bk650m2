@@ -1,0 +1,12 @@
+<metadata>
+    <apcups>
+        <filename>ApcUps.js</filename>
+        <link>/ui/apcups</link>
+        <endpoints>
+            <endpoint>/api/apcups/service/status</endpoint>
+        </endpoints>
+        <translations>
+            <title>APC UPS BK650M2</title>
+        </translations>
+    </apcups>
+</metadata>

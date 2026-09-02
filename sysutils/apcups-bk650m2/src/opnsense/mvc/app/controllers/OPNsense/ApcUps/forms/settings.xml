@@ -1,0 +1,101 @@
+<form>
+    <field>
+        <id>apcups.general.enabled</id>
+        <label>启用</label>
+        <type>checkbox</type>
+        <help>启用 APC BK650M2 本地 USB UPS 监控。</help>
+    </field>
+    <field>
+        <id>apcups.general.upsName</id>
+        <label>UPS 名称</label>
+        <type>text</type>
+        <help>供 upsc、upsmon 和 upsd 使用的 NUT 设备名称。</help>
+    </field>
+    <field>
+        <id>apcups.general.driver</id>
+        <label>驱动</label>
+        <type>text</type>
+        <help>APC BK650M2 通过 USB 连接时请使用 usbhid-ups。</help>
+    </field>
+    <field>
+        <id>apcups.general.port</id>
+        <label>端口</label>
+        <type>text</type>
+        <help>通常情况下使用 auto，除非需要绑定到特定 USB 设备。</help>
+    </field>
+    <field>
+        <id>apcups.general.description</id>
+        <label>描述</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>apcups.general.monitorUser</id>
+        <label>监控用户名</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>apcups.general.monitorPassword</id>
+        <label>监控密码</label>
+        <type>password</type>
+    </field>
+    <field>
+        <id>apcups.general.vendorId</id>
+        <label>USB VendorID</label>
+        <type>text</type>
+        <help>USB 厂商 ID，4 位十六进制。APC 全系为 051d，保持默认即可。</help>
+    </field>
+    <field>
+        <id>apcups.general.serverEnabled</id>
+        <label>启用 UPS 网络服务（UPS Server）</label>
+        <type>checkbox</type>
+        <help>开放 NUT 服务端口 TCP 3493，供局域网内的 NAS、Proxmox、WinNUT 等客户端作为"从机"监控这台 UPS。启用后需在"防火墙 → 规则"中放行对应接口到本机 TCP 3493。客户端配置：UPS 类型选 NUT/Netclient，地址填防火墙 IP，账号密码填下方客户端凭据。</help>
+    </field>
+    <field>
+        <id>apcups.general.serverUser</id>
+        <label>客户端用户名</label>
+        <type>text</type>
+        <help>局域网客户端连接 NUT 服务使用的账号。仅启用网络服务时生效。</help>
+    </field>
+    <field>
+        <id>apcups.general.serverPassword</id>
+        <label>客户端密码</label>
+        <type>password</type>
+        <help>启用网络服务时请设置密码；留空则客户端无法连接（本机监控不受影响）。</help>
+    </field>
+    <field>
+        <id>apcups.shutdown.mode</id>
+        <label>关机策略</label>
+        <type>dropdown</type>
+        <help>选择市电断电后 OPNsense 何时关机。</help>
+    </field>
+    <field>
+        <id>apcups.shutdown.onBatteryDelay</id>
+        <label>电池供电延迟</label>
+        <type>text</type>
+        <help>策略为“电池供电 N 秒后关机”时，等待的秒数。</help>
+    </field>
+    <field>
+        <id>apcups.shutdown.batteryShutdownThreshold</id>
+        <label>电量关机阈值（%）</label>
+        <type>text</type>
+        <help>策略为“电量降到指定百分比后关机”时，触发电量百分比。默认 30%。</help>
+    </field>
+    <field>
+        <id>apcups.shutdown.lowBatteryCharge</id>
+        <label>低电量阈值</label>
+        <type>text</type>
+        <help>向 USB HID 驱动请求低电量状态的电量百分比。</help>
+    </field>
+    <field>
+        <id>apcups.shutdown.lowRuntime</id>
+        <label>低续航阈值</label>
+        <type>text</type>
+        <help>向 USB HID 驱动请求低电量状态的剩余续航秒数。</help>
+    </field>
+    <field>
+        <id>apcups.shutdown.finalDelay</id>
+        <label>最终延迟</label>
+        <type>text</type>
+        <help>upsmon 执行关机命令前的等待秒数。</help>
+    </field>
+</form>

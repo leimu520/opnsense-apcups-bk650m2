@@ -1,0 +1,6 @@
+APC BK650M2 UPS management plugin for OPNsense.
+
+This plugin configures Network UPS Tools for a locally attached APC Back-UPS
+BK650M2 over USB, exposes a dedicated Services menu page, reports live UPS
+status through upsc, and provides shutdown policy settings through upsmon and
+upssched.

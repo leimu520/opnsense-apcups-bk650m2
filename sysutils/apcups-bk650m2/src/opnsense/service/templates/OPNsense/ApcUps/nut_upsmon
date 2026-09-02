@@ -1,0 +1,5 @@
+{% if helpers.exists('OPNsense.ApcUps.general.enabled') and OPNsense.ApcUps.general.enabled == '1' %}
+nut_upsmon_enable="YES"
+{% else %}
+nut_upsmon_enable="NO"
+{% endif %}

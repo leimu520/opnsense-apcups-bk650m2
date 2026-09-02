@@ -1,0 +1,5 @@
+<menu>
+    <Services>
+        <ApcUps VisibleName="APC UPS BK650M2" cssClass="fa fa-battery-half fa-fw" url="/ui/apcups/"/>
+    </Services>
+</menu>

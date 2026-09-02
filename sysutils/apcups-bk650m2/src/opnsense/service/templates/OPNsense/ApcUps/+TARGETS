@@ -1,0 +1,10 @@
+nut:/etc/rc.conf.d/nut
+nut_upsmon:/etc/rc.conf.d/nut_upsmon
+nut.conf:/usr/local/etc/nut/nut.conf
+ups.conf:/usr/local/etc/nut/ups.conf
+upsd.conf:/usr/local/etc/nut/upsd.conf
+upsd.users:/usr/local/etc/nut/upsd.users
+upsmon.conf:/usr/local/etc/nut/upsmon.conf
+upssched.conf:/usr/local/etc/nut/upssched.conf
+notify.conf:/usr/local/opnsense/scripts/apcupsbk650m2/notify.conf
+cron:/etc/cron.d/apcups-bk650m2

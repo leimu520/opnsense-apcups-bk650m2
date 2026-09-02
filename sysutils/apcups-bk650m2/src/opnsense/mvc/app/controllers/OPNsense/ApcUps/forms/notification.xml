@@ -1,0 +1,160 @@
+<form>
+    <field>
+        <id>apcups.notifications.emailEnabled</id>
+        <label>启用邮件通知</label>
+        <type>checkbox</type>
+        <help>开启后，UPS 状态变化时发送邮件。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.emailSmtpHost</id>
+        <label>SMTP 服务器</label>
+        <type>text</type>
+        <help>例如：smtp.qq.com、smtp.163.com、smtp.exmail.qq.com</help>
+    </field>
+    <field>
+        <id>apcups.notifications.emailSmtpPort</id>
+        <label>SMTP 端口</label>
+        <type>text</type>
+        <help>通常为 25、465 或 587。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.emailSmtpUsername</id>
+        <label>SMTP 用户名</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>apcups.notifications.emailSmtpPassword</id>
+        <label>SMTP 密码</label>
+        <type>password</type>
+        <help>QQ/163 等通常需要填写授权码，不是登录密码。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.emailFrom</id>
+        <label>发件人邮箱</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>apcups.notifications.emailTo</id>
+        <label>收件人邮箱</label>
+        <type>text</type>
+        <help>多个收件人用逗号分隔。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.emailUseTls</id>
+        <label>启用 TLS</label>
+        <type>checkbox</type>
+        <help>大多数 SMTP 服务器建议开启 TLS。</help>
+    </field>
+
+    <field>
+        <id>apcups.notifications.wechatBotEnabled</id>
+        <label>启用企业微信机器人</label>
+        <type>checkbox</type>
+        <help>开启后，UPS 状态变化时通过企业微信机器人推送消息。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.wechatBotWebhook</id>
+        <label>企业微信机器人 Webhook 地址</label>
+        <type>text</type>
+        <help>例如：https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx</help>
+    </field>
+
+    <field>
+        <id>apcups.notifications.wechatAppEnabled</id>
+        <label>启用企业微信应用消息</label>
+        <type>checkbox</type>
+        <help>开启后，UPS 状态变化时通过企业微信应用推送消息。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.wechatAppCorpId</id>
+        <label>企业 ID（CorpID）</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>apcups.notifications.wechatAppCorpSecret</id>
+        <label>应用凭证（CorpSecret）</label>
+        <type>password</type>
+    </field>
+    <field>
+        <id>apcups.notifications.wechatAppAgentId</id>
+        <label>应用 ID（AgentId）</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>apcups.notifications.wechatAppToUser</id>
+        <label>接收用户</label>
+        <type>text</type>
+        <help>默认 @all 表示全员，也可填写用户账号，多个用 | 分隔。</help>
+    </field>
+
+    <field>
+        <id>apcups.notifications.smsEnabled</id>
+        <label>启用短信通知</label>
+        <type>checkbox</type>
+        <help>开启后，UPS 状态变化时发送短信。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.smsProvider</id>
+        <label>短信服务商</label>
+        <type>dropdown</type>
+        <help>选择使用的短信服务商。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.smsApiUrl</id>
+        <label>API 接口地址</label>
+        <type>text</type>
+        <help>自定义 HTTP 接口时使用。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.smsApiKey</id>
+        <label>AccessKey / API Key</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>apcups.notifications.smsApiSecret</id>
+        <label>AccessKey Secret / API Secret</label>
+        <type>password</type>
+    </field>
+    <field>
+        <id>apcups.notifications.smsPhoneNumber</id>
+        <label>接收手机号</label>
+        <type>text</type>
+        <help>多个手机号用逗号分隔。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.smsTemplateCode</id>
+        <label>短信模板 Code</label>
+        <type>text</type>
+        <help>阿里云短信模板 Code。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.smsSignName</id>
+        <label>短信签名</label>
+        <type>text</type>
+        <help>阿里云短信签名。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.commAlertEnabled</id>
+        <label>启用掉线通知</label>
+        <type>checkbox</type>
+        <help>开启后，UPS 通信中断（COMMBAD）、通信恢复（COMMOK）、长时间无响应（NOCOMM）以及 watchdog 自动恢复时会发送通知。关闭后仍会自动恢复，只是不再发送这些通知。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.commAlertGrace</id>
+        <label>掉线通知宽限期（秒）</label>
+        <type>text</type>
+        <help>通信中断持续超过该秒数才发送掉线通知；短暂闪断并自行恢复则不打扰。取值 30-3600，默认 120。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.batteryAlertEnabled</id>
+        <label>启用电量阈值通知</label>
+        <type>checkbox</type>
+        <help>开启后，电池供电时电量降到指定阈值会发送一次通知。</help>
+    </field>
+    <field>
+        <id>apcups.notifications.batteryAlertThreshold</id>
+        <label>电量阈值（%）</label>
+        <type>text</type>
+        <help>例如 50，表示电量降到 50% 时发送通知。只在电池供电时生效。</help>
+    </field>
+</form>

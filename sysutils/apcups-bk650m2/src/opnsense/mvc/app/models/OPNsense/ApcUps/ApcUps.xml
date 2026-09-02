@@ -1,0 +1,221 @@
+<model>
+    <mount>//OPNsense/ApcUps</mount>
+    <description>APC BK650M2 UPS 管理</description>
+    <version>2.1.0</version>
+    <items>
+        <general>
+            <enabled type="BooleanField">
+                <default>1</default>
+                <Required>Y</Required>
+            </enabled>
+            <upsName type="TextField">
+                <default>BK650M2</default>
+                <Required>Y</Required>
+                <mask>/^([0-9a-zA-Z._\-]){1,64}$/u</mask>
+                <ValidationMessage>UPS 名称只能包含字母、数字、点、短横线和下划线。</ValidationMessage>
+            </upsName>
+            <driver type="TextField">
+                <default>usbhid-ups</default>
+                <Required>Y</Required>
+                <mask>/^([0-9a-zA-Z._\-]){1,64}$/u</mask>
+            </driver>
+            <port type="TextField">
+                <default>auto</default>
+                <Required>Y</Required>
+                <mask>/^([0-9a-zA-Z._\-\/:]){1,128}$/u</mask>
+            </port>
+            <description type="TextField">
+                <default>APC Back-UPS BK650M2</default>
+                <Required>N</Required>
+            </description>
+            <monitorUser type="TextField">
+                <default>monuser</default>
+                <Required>Y</Required>
+                <mask>/^([0-9a-zA-Z._\-]){1,64}$/u</mask>
+            </monitorUser>
+            <monitorPassword type="TextField">
+                <default>apcupsbk650m2</default>
+                <Required>Y</Required>
+            </monitorPassword>
+            <vendorId type="TextField">
+                <default>051d</default>
+                <Required>Y</Required>
+                <mask>/^([0-9a-fA-F]{4})$/u</mask>
+                <ValidationMessage>USB VendorID 必须是 4 位十六进制（APC 为 051d）。</ValidationMessage>
+            </vendorId>
+            <serverEnabled type="BooleanField">
+                <default>0</default>
+                <Required>Y</Required>
+            </serverEnabled>
+            <serverUser type="TextField">
+                <default>upsclient</default>
+                <Required>Y</Required>
+                <mask>/^([0-9a-zA-Z._\-]){1,64}$/u</mask>
+            </serverUser>
+            <serverPassword type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </serverPassword>
+        </general>
+        <shutdown>
+            <mode type="OptionField">
+                <default>timer</default>
+                <OptionValues>
+                    <disabled>不关机</disabled>
+                    <lowbatt>UPS 低电量时关机</lowbatt>
+                    <battery>电量降到指定百分比后关机</battery>
+                    <timer>电池供电 N 秒后关机</timer>
+                </OptionValues>
+            </mode>
+            <onBatteryDelay type="IntegerField">
+                <default>300</default>
+                <MinimumValue>0</MinimumValue>
+                <MaximumValue>86400</MaximumValue>
+                <Required>Y</Required>
+            </onBatteryDelay>
+            <lowBatteryCharge type="IntegerField">
+                <default>20</default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>100</MaximumValue>
+                <Required>Y</Required>
+            </lowBatteryCharge>
+            <lowRuntime type="IntegerField">
+                <default>180</default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>86400</MaximumValue>
+                <Required>Y</Required>
+            </lowRuntime>
+            <finalDelay type="IntegerField">
+                <default>5</default>
+                <MinimumValue>0</MinimumValue>
+                <MaximumValue>600</MaximumValue>
+                <Required>Y</Required>
+            </finalDelay>
+            <batteryShutdownThreshold type="IntegerField">
+                <default>30</default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>100</MaximumValue>
+                <Required>Y</Required>
+            </batteryShutdownThreshold>
+        </shutdown>
+        <notifications>
+            <emailEnabled type="BooleanField">
+                <default>0</default>
+                <Required>Y</Required>
+            </emailEnabled>
+            <emailSmtpHost type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </emailSmtpHost>
+            <emailSmtpPort type="IntegerField">
+                <default>587</default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>65535</MaximumValue>
+                <Required>Y</Required>
+            </emailSmtpPort>
+            <emailSmtpUsername type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </emailSmtpUsername>
+            <emailSmtpPassword type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </emailSmtpPassword>
+            <emailFrom type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </emailFrom>
+            <emailTo type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </emailTo>
+            <emailUseTls type="BooleanField">
+                <default>1</default>
+                <Required>Y</Required>
+            </emailUseTls>
+            <wechatBotEnabled type="BooleanField">
+                <default>0</default>
+                <Required>Y</Required>
+            </wechatBotEnabled>
+            <wechatBotWebhook type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </wechatBotWebhook>
+            <wechatAppEnabled type="BooleanField">
+                <default>0</default>
+                <Required>Y</Required>
+            </wechatAppEnabled>
+            <wechatAppCorpId type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </wechatAppCorpId>
+            <wechatAppCorpSecret type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </wechatAppCorpSecret>
+            <wechatAppAgentId type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </wechatAppAgentId>
+            <wechatAppToUser type="TextField">
+                <default>@all</default>
+                <Required>N</Required>
+            </wechatAppToUser>
+            <smsEnabled type="BooleanField">
+                <default>0</default>
+                <Required>Y</Required>
+            </smsEnabled>
+            <smsProvider type="OptionField">
+                <default>aliyun</default>
+                <OptionValues>
+                    <aliyun>阿里云短信</aliyun>
+                    <custom>自定义 HTTP 接口</custom>
+                </OptionValues>
+            </smsProvider>
+            <smsApiUrl type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </smsApiUrl>
+            <smsApiKey type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </smsApiKey>
+            <smsApiSecret type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </smsApiSecret>
+            <smsPhoneNumber type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </smsPhoneNumber>
+            <smsTemplateCode type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </smsTemplateCode>
+            <smsSignName type="TextField">
+                <default></default>
+                <Required>N</Required>
+            </smsSignName>
+            <commAlertEnabled type="BooleanField">
+                <default>1</default>
+                <Required>Y</Required>
+            </commAlertEnabled>
+            <commAlertGrace type="IntegerField">
+                <default>120</default>
+                <MinimumValue>30</MinimumValue>
+                <MaximumValue>3600</MaximumValue>
+                <Required>Y</Required>
+            </commAlertGrace>
+            <batteryAlertEnabled type="BooleanField">
+                <default>0</default>
+                <Required>Y</Required>
+            </batteryAlertEnabled>
+            <batteryAlertThreshold type="IntegerField">
+                <default>50</default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>100</MaximumValue>
+                <Required>Y</Required>
+            </batteryAlertThreshold>
+        </notifications>
+    </items>
+</model>
