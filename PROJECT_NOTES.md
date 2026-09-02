@@ -59,7 +59,7 @@
    battery.charge: 100
    battery.runtime: 2417
    device.model: BK650M2-CH
-   device.serial: 9B2022A04479
+   device.serial: 9B20xxxxxxxx
    input.voltage: 224.0
    ups.load: 9
    ups.status: OL DISCHRG
