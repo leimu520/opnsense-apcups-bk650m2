@@ -194,11 +194,11 @@ os-apcups-bk650m2-2.0.2.txz
 1. `service.sh restart` 改为软重启：停止 `nut_upsmon`、`nut`/`upsd` 后重新启动，尽量保留正在运行的 UPS 驱动，避免 FreeBSD 内核 HID 驱动抢占 USB 设备后 NUT 无法再次认领。
 2. `service.sh force-restart` 为深度重启：停止 `nut_upsmon`、`nut`/`upsd` 后，使用 `upsdrvctl stop` 停止驱动并 `pkill` 清理残留进程，再重新启动。
 3. `service.sh reset-usb` 在深度重启基础上，对检测到的 APC USB 设备执行 `usbconfig -d ugenX.Y reset`。
-4. `watchdog.sh` 每 2 分钟执行一次 `upsc` 探测：
-   - 连续 3 次探测失败（约 6 分钟）则调用 `service.sh restart`（软重启）。
-   - 仍失败则调用 `service.sh reset-usb`（USB 重置）。实证表明 BK650M2 固件死锁后只有 USB 重置有效，故深度重启放在最后兜底。
-   - 仍失败则调用 `service.sh force-restart`（深度重启）。
-   - 恢复或失败时都会通过 `notify.py` 发送通知，且受"启用掉线通知"开关控制。
+4. `watchdog.sh` 每 1 分钟执行一次 `upsc` 探测（带运行锁，恢复序列跨 cron 周期时防止并发）：
+   - 连续 3 次探测失败（约 2-3 分钟）则触发恢复，顺序为：`reset-usb`（USB 重置，实证 7/7 成功，且含完整 NUT 重启）→ `restart`（软重启）→ `force-restart`（深度重启）。
+   - 实证表明 BK650M2 固件死锁后普通重启全部无效，只有 USB 总线重置有效，故 USB 重置放第一位，软/深重启仅作后备。
+   - 恢复动作不受宽限期影响（越快修好越好），但**通知全部遵守掉线通知宽限期**并与 upssched 共享"本次掉线已告警"标志：告警只在掉线持续超过宽限期且 upssched 尚未告警时发送；恢复通知只在确实为本次掉线发过告警时发送；宽限期内自愈的掉线完全静默。watchdog 恢复时会一并清理标志与掉线起点文件。
+   - 探测到电池供电（ups.status 含 OB）时顺带执行 `battery_check.py`：电量阈值通知与按百分比关机需要周期性检查，仅靠 upssched 的 ONBATT 定时器（只触发一次）不生效。
 5. `ups.conf` 默认启用 `pollonly`、`pollinterval = 15`、`waitbeforereconnect = 30`、`maxretry = 3`、`retrydelay = 5`，降低中断传输导致掉线的概率，并让驱动在意外 USB 错误后等待 UPS 固件恢复。
 6. `upsd.conf` 增加 `MAXAGE 60`，避免 upsd 在 15 秒轮询间隔下误判数据过期。
 7. `upsmon.conf` 将 `DEADTIME` 从 15 调整为 45，避免 pollinterval 变大后出现“data stale”误报。
@@ -220,13 +220,13 @@ os-apcups-bk650m2-2.0.2.txz
 
 以上掉线类通知（含 watchdog 恢复通知）由通知页的"启用掉线通知"开关统一控制，写入 `notify.conf` 的 `comm_alert_enabled` 字段；关闭后系统日志仍照常记录，仅停止推送。
 
-掉线通知带防抖：`upssched.conf` 中 COMMBAD 通过 `START-TIMER commbad_alert` 延迟"掉线通知宽限期"（默认 120 秒）后触发，COMMOK 通过 `CANCEL-TIMER` 取消，短暂闪断自愈不打扰。标志文件 `apcups_comm_alert_sent` 有 1 小时新鲜度校验，防止 watchdog 重启 upsmon 后无 COMMOK 导致标志卡死漏报。
+掉线通知带防抖：`upssched.conf` 中 COMMBAD 与 NOCOMM 都通过 `START-TIMER` 延迟"掉线通知宽限期"（默认 120 秒）后触发，COMMOK 通过 `CANCEL-TIMER` 取消两个定时器，短暂闪断自愈不打扰。定时器到点发送前还会复核一次 UPS 是否仍然断连（watchdog 重启 upsmon 的恢复不会产生 COMMOK，定时器可能在修复后才到点）。COMMBAD/NOCOMM/watchdog 三条告警路径共享标志文件 `apcups_comm_alert_sent`（每 2 小时窗口内每 1 小时新鲜度校验，防止 watchdog 重启 upsmon 后无 COMMOK 导致标志卡死漏报），保证一次掉线最多一组"告警+恢复"通知。宽限期取值渲染在 `upssched.conf` 定时器与 `notify.conf` 的 `comm_alert_grace` 字段，watchdog 从后者读取同一配置。
 
 实现方式：
 
 - `upsmon.conf` 为 `COMMOK`、`COMMBAD`、`NOCOMM` 配置 `NOTIFYFLAG ... EXEC`。
 - `upssched.conf` 通过 `AT COMMBAD/COMMOK/NOCOMM * EXECUTE ...` 触发脚本。
-- `upssched-cmd.sh` 调用 `notify.py` 发送消息，并用 `/var/db/nut/apcups_comm_alert_sent` 避免 `COMMBAD` 重复推送。
+- `upssched-cmd.sh` 调用 `notify.py` 发送消息，COMMBAD/NOCOMM 告警共用 `/var/db/nut/apcups_comm_alert_sent` 避免一次掉线重复推送；watchdog（`watchdog.sh`）告警前检查同一标志、发送后写入，恢复时清理。
 
 ### 关机联动
 
@@ -336,6 +336,11 @@ os-apcups-bk650m2-2.0.2.txz
     ```sh
     service configd restart
     ```
+
+10a. `notify.conf` 是 JSON 文件：所有写入它的模型文本字段（通知页 16 个字段）已加掩码
+    `/^[^"\\]*$/u`，新增字段若也写入 JSON 必须同样加掩码，否则值含引号/反斜杠会让
+    notify.py 解析失败、全部通知静默失效。`general.description` 写入 ups.conf 的
+    `desc = "..."`，同理已加掩码。
 
 11. 修改菜单或 ACL 后可能需要清缓存：
     ```sh

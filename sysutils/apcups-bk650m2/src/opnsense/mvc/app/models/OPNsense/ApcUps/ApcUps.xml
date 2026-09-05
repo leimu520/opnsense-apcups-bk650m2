@@ -1,7 +1,7 @@
 <model>
     <mount>//OPNsense/ApcUps</mount>
     <description>APC BK650M2 UPS 管理</description>
-    <version>2.1.0</version>
+    <version>2.2.2</version>
     <items>
         <general>
             <enabled type="BooleanField">
@@ -27,6 +27,8 @@
             <description type="TextField">
                 <default>APC Back-UPS BK650M2</default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>描述不能包含英文双引号或反斜杠，否则会破坏 NUT 配置文件。</ValidationMessage>
             </description>
             <monitorUser type="TextField">
                 <default>monuser</default>
@@ -106,6 +108,8 @@
             <emailSmtpHost type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </emailSmtpHost>
             <emailSmtpPort type="IntegerField">
                 <default>587</default>
@@ -116,18 +120,26 @@
             <emailSmtpUsername type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </emailSmtpUsername>
             <emailSmtpPassword type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </emailSmtpPassword>
             <emailFrom type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </emailFrom>
             <emailTo type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </emailTo>
             <emailUseTls type="BooleanField">
                 <default>1</default>
@@ -140,6 +152,8 @@
             <wechatBotWebhook type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </wechatBotWebhook>
             <wechatAppEnabled type="BooleanField">
                 <default>0</default>
@@ -148,18 +162,26 @@
             <wechatAppCorpId type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </wechatAppCorpId>
             <wechatAppCorpSecret type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </wechatAppCorpSecret>
             <wechatAppAgentId type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </wechatAppAgentId>
             <wechatAppToUser type="TextField">
                 <default>@all</default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </wechatAppToUser>
             <smsEnabled type="BooleanField">
                 <default>0</default>
@@ -175,26 +197,38 @@
             <smsApiUrl type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </smsApiUrl>
             <smsApiKey type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </smsApiKey>
             <smsApiSecret type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </smsApiSecret>
             <smsPhoneNumber type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </smsPhoneNumber>
             <smsTemplateCode type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </smsTemplateCode>
             <smsSignName type="TextField">
                 <default></default>
                 <Required>N</Required>
+                <mask>/^[^"\\]*$/u</mask>
+                <ValidationMessage>不能包含英文双引号或反斜杠，否则通知配置文件会损坏。</ValidationMessage>
             </smsSignName>
             <commAlertEnabled type="BooleanField">
                 <default>1</default>

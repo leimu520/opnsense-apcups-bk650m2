@@ -19,13 +19,14 @@ $(document).ready(function() {
         $("#upsMessage").text(valueOrDash(data.message));
     }
 
-    function refreshStatus() {
+    function refreshStatus(done) {
         ajaxCall(url="/api/apcups/service/status", sendData={}, callback=function(data,status) {
             setStatus(data);
+            if (typeof done === "function") { done(status); }
         });
     }
 
-    function refreshDiagnostics() {
+    function refreshDiagnostics(done) {
         ajaxCall(url="/api/apcups/service/diagnostics", sendData={}, callback=function(data,status) {
             var html = "";
             if (data.checks !== undefined) {
@@ -37,7 +38,49 @@ $(document).ready(function() {
                 html = "<pre>" + (data.message || "未返回诊断数据") + "</pre>";
             }
             $("#diagnosticsOutput").html(html);
+            if (typeof done === "function") { done(status); }
         });
+    }
+
+    // Mirror core SimpleActionButton feedback: a .reload_progress icon slot
+    // inside the button shows a pulsing spinner while the action runs and a
+    // check mark for a few seconds once it succeeded.
+    function actionFeedback($btn) {
+        var $icon = $btn.find(".reload_progress");
+        if (!$icon.length) {
+            $icon = $('<i class="reload_progress" style="display:inline-block;"></i>');
+            $btn.append(document.createTextNode(" "), $icon);
+        }
+        // The hide timer lives on the shared icon node so a re-click during the
+        // check-mark window cannot be clobbered by a stale timeout.
+        function setIcon(add) {
+            var prev = $icon.data("apcHideTimer");
+            if (prev) { clearTimeout(prev); $icon.data("apcHideTimer", null); }
+            $icon.removeClass("fa fa-check fa-spinner fa-pulse");
+            if (add) {
+                $icon.addClass("fa " + add);
+                $icon.css("width", "1em");
+                if (add === "fa-check") {
+                    $icon.data("apcHideTimer", setTimeout(function () { setIcon(""); }, 4000));
+                }
+            } else {
+                $icon.css("width", "");
+            }
+        }
+        return {
+            busy: function () {
+                $btn.prop("disabled", true);
+                setIcon("fa-spinner fa-pulse");
+            },
+            success: function () {
+                $btn.prop("disabled", false);
+                setIcon("fa-check");
+            },
+            fail: function () {
+                $btn.prop("disabled", false);
+                setIcon("");
+            }
+        };
     }
 
     function updateActionBar() {
@@ -137,40 +180,60 @@ $(document).ready(function() {
     });
 
     $("#saveAct").click(function(){
+        var fb = actionFeedback($(this));
+        fb.busy();
+        var failed = function () {
+            fb.fail();
+        };
         saveFormToEndpoint("/api/apcups/settings/set", "frm_Settings", function(){
             saveFormToEndpoint("/api/apcups/settings/set", "frm_NotificationSettings", function(){
                 ajaxCall(url="/api/apcups/service/reload", sendData={}, callback=function(data,status) {
-                    refreshStatus();
+                    if (status === "success") {
+                        fb.success();
+                        refreshStatus();
+                    } else {
+                        failed();
+                        BootstrapDialog.show({
+                            title: "重载失败",
+                            message: "配置已保存，但服务重载失败，请到诊断页检查 NUT 服务状态。",
+                            type: BootstrapDialog.TYPE_DANGER,
+                            buttons: [{
+                                label: '关闭',
+                                action: function(dialogRef) {
+                                    dialogRef.close();
+                                }
+                            }]
+                        });
+                    }
                 });
-            });
-        });
+            }, false, failed);
+        }, false, failed);
     });
 
     $("#testNotifyAct").click(function(){
-        var $btn = $(this);
-        var originalHtml = $btn.html();
-        $btn.prop("disabled", true).html('<i class="fa fa-spinner fa-spin"></i> 测试中...');
-
+        var fb = actionFeedback($(this));
+        fb.busy();
         ajaxCall(
             url="/api/apcups/service/testNotify",
             sendData={channel: "all"},
             callback=function(data, status) {
-                $btn.prop("disabled", false).html(originalHtml);
-                showTestNotifyResult(data);
-            },
-            failCallback=function(data, status) {
-                $btn.prop("disabled", false).html(originalHtml);
-                BootstrapDialog.show({
-                    title: "测试失败",
-                    message: "请求失败，请检查网络或后端日志。",
-                    type: BootstrapDialog.TYPE_DANGER,
-                    buttons: [{
-                        label: '关闭',
-                        action: function(dialogRef) {
-                            dialogRef.close();
-                        }
-                    }]
-                });
+                if (status === "success") {
+                    fb.success();
+                    showTestNotifyResult(data);
+                } else {
+                    fb.fail();
+                    BootstrapDialog.show({
+                        title: "测试失败",
+                        message: "请求失败，请检查网络或后端日志。",
+                        type: BootstrapDialog.TYPE_DANGER,
+                        buttons: [{
+                            label: '关闭',
+                            action: function(dialogRef) {
+                                dialogRef.close();
+                            }
+                        }]
+                    });
+                }
             }
         );
     });
@@ -182,15 +245,26 @@ $(document).ready(function() {
     });
 
     $("#refreshAct").click(function(){
-        refreshStatus();
+        var fb = actionFeedback($(this));
+        fb.busy();
+        refreshStatus(function(status){
+            if (status === "success") { fb.success(); } else { fb.fail(); }
+        });
     });
 
     $("#diagnosticsAct").click(function(){
-        refreshDiagnostics();
+        var fb = actionFeedback($(this));
+        fb.busy();
+        refreshDiagnostics(function(status){
+            if (status === "success") { fb.success(); } else { fb.fail(); }
+        });
     });
 
     refreshStatus();
-    window.setInterval(refreshStatus, 10000);
+    // Skip polling while the tab is hidden: every poll runs upsc on the box.
+    window.setInterval(function () {
+        if (!document.hidden) { refreshStatus(); }
+    }, 10000);
 });
 </script>
 
@@ -219,13 +293,13 @@ $(document).ready(function() {
             </table>
         </div>
         <div style="margin-top: 10px;">
-            <button class="btn btn-primary" id="refreshAct" type="button"><b>刷新</b></button>
+            <button class="btn btn-primary" id="refreshAct" type="button"><b>刷新</b> <i class="reload_progress" style="display:inline-block;"></i></button>
             <button class="btn btn-default" id="restartAct" data-endpoint="/api/apcups/service/restart" data-label="重启 NUT"></button>
         </div>
     </div>
     <div id="diagnostics" class="tab-pane fade">
         <div style="padding: 20px 0 15px 20px;">
-            <button class="btn btn-primary" id="diagnosticsAct" type="button"><b>运行诊断</b></button>
+            <button class="btn btn-primary" id="diagnosticsAct" type="button"><b>运行诊断</b> <i class="reload_progress" style="display:inline-block;"></i></button>
         </div>
         <div id="diagnosticsOutput" style="margin-top: 15px; padding: 0 20px 15px 20px;"></div>
     </div>
@@ -240,7 +314,7 @@ $(document).ready(function() {
         {{ partial("layout_partials/base_form",['fields':notificationForm,'id':'frm_NotificationSettings']) }}
     </div>
     <div id="bottomActionBar" class="col-md-12" style="display:none; margin-top: 15px; padding-bottom: 20px;">
-        <button class="btn btn-primary" id="saveAct" type="button"><b>保存</b></button>
-        <button class="btn btn-default" id="testNotifyAct" type="button"><b><i class="fa fa-paper-plane"></i> 测试通知</b></button>
+        <button class="btn btn-primary" id="saveAct" type="button"><b>保存</b> <i class="reload_progress" style="display:inline-block;"></i></button>
+        <button class="btn btn-default" id="testNotifyAct" type="button"><b><i class="fa fa-paper-plane"></i> 测试通知</b> <i class="reload_progress" style="display:inline-block;"></i></button>
     </div>
 </div>

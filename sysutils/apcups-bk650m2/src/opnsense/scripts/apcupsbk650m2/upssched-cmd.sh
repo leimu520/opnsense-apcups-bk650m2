@@ -78,17 +78,31 @@ case "${1:-}" in
         BODY="[${HOSTNAME}]上的UPS电池容量剩余${charge}%，请及时检查市电情况或关闭其他设备！"
         send_notify "${SUBJECT}" "${BODY}"
         ;;
-    commbad_alert)
-        logger -t apcups-bk650m2 "UPS communication lost"
-        # Only reached when the loss persisted past the upssched grace timer.
-        if ! comm_alert_flag_fresh; then
-            mkdir -p "${STATE_DIR}"
-            touch "${COMM_ALERT_FLAG}"
-            if comm_notify_enabled; then
-                SUBJECT="${HOSTNAME}-UPS告警通知"
+    commbad_alert|nocomm_alert)
+        # Reached only when the outage persisted past the upssched grace timer.
+        # COMMBAD and NOCOMM can both fire for the same outage; they share the
+        # alert flag so only the first one sends a notification.
+        logger -t apcups-bk650m2 "UPS communication alert triggered: ${1}"
+        # Final re-check before alarming: the timer may outlive a quick
+        # recovery (a watchdog restart of upsmon never emits COMMOK), and an
+        # alert for an already-recovered UPS is pure noise.
+        if [ -n "$(upsc_var "ups.status")" ]; then
+            logger -t apcups-bk650m2 "UPS reachable again, skipping stale alert"
+            exit 0
+        fi
+        if comm_alert_flag_fresh; then
+            exit 0
+        fi
+        mkdir -p "${STATE_DIR}"
+        touch "${COMM_ALERT_FLAG}"
+        if comm_notify_enabled; then
+            SUBJECT="${HOSTNAME}-UPS告警通知"
+            if [ "${1}" = "nocomm_alert" ]; then
+                BODY="[${HOSTNAME}]上的UPS长时间无响应，请检查UPS是否开机以及USB连接是否正常"
+            else
                 BODY="[${HOSTNAME}]上的UPS通信中断，无法获取UPS状态，请检查USB连接或UPS电源"
-                send_notify "${SUBJECT}" "${BODY}"
             fi
+            send_notify "${SUBJECT}" "${BODY}"
         fi
         ;;
     commok_alert)
@@ -100,16 +114,6 @@ case "${1:-}" in
                 send_notify "${SUBJECT}" "${BODY}"
             fi
             rm -f "${COMM_ALERT_FLAG}"
-        fi
-        ;;
-    nocomm_alert)
-        logger -t apcups-bk650m2 "UPS not communicating"
-        # Skip when we already alerted for this outage (fresh flag); NOCOMM is
-        # only useful when no COMMBAD alert has gone out (e.g. upsd itself died).
-        if comm_notify_enabled && ! comm_alert_flag_fresh; then
-            SUBJECT="${HOSTNAME}-UPS告警通知"
-            BODY="[${HOSTNAME}]上的UPS长时间无响应，请检查UPS是否开机以及USB连接是否正常"
-            send_notify "${SUBJECT}" "${BODY}"
         fi
         ;;
     onbatt_shutdown|lowbatt_shutdown)

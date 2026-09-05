@@ -137,13 +137,13 @@
         <id>apcups.notifications.commAlertEnabled</id>
         <label>启用掉线通知</label>
         <type>checkbox</type>
-        <help>开启后，UPS 通信中断（COMMBAD）、通信恢复（COMMOK）、长时间无响应（NOCOMM）以及 watchdog 自动恢复时会发送通知。关闭后仍会自动恢复，只是不再发送这些通知。</help>
+        <help>开启后，UPS 通信中断/恢复（含 watchdog 自动恢复过程）会发送通知，且都遵守下方宽限期：短于宽限期的掉线完全静默，每次掉线最多一组“告警+恢复”通知。关闭后仍会自动恢复，只是不再发送这些通知。</help>
     </field>
     <field>
         <id>apcups.notifications.commAlertGrace</id>
         <label>掉线通知宽限期（秒）</label>
         <type>text</type>
-        <help>通信中断持续超过该秒数才发送掉线通知；短暂闪断并自行恢复则不打扰。取值 30-3600，默认 120。</help>
+        <help>掉线持续超过该秒数才发送告警（邮件在掉线满宽限期时发出，因此邮件时间晚于实际掉线时间）；宽限期内自行恢复或被 watchdog 修复则不打扰。取值 30-3600，默认 120。BK650M2 固件死锁一般需要约 6-8 分钟才会被自动修复，若不希望这类掉线打扰，建议设为 600。</help>
     </field>
     <field>
         <id>apcups.notifications.batteryAlertEnabled</id>

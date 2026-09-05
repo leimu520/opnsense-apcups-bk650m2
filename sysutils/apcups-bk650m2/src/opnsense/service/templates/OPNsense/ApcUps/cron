@@ -1,7 +1,9 @@
 {% if helpers.exists('OPNsense.ApcUps.general.enabled') and OPNsense.ApcUps.general.enabled == '1' %}
-# APC BK650M2 UPS watchdog: check connectivity and auto-recover every 2 minutes.
-# Three consecutive failures (~6 minutes) trigger the recovery escalation,
+# APC BK650M2 UPS watchdog: check connectivity and auto-recover every minute.
+# Three consecutive failures (~2-3 minutes) trigger the recovery escalation,
 # since the BK650M2 firmware can wedge its USB HID interface without any
 # warning and only a bus-level USB reset reliably brings it back.
-*/2 * * * * root /usr/local/opnsense/scripts/apcupsbk650m2/watchdog.sh >/dev/null 2>&1
+# Notifications honor the notification grace period (notify.conf
+# comm_alert_grace) and never double-alert with the upssched debounce.
+* * * * * root /usr/local/opnsense/scripts/apcupsbk650m2/watchdog.sh >/dev/null 2>&1
 {% endif %}
