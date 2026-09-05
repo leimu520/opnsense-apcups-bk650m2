@@ -1,302 +1,259 @@
-# os-apcups-bk650m2 — APC UPS plugin for OPNsense
+<div align="right">
 
-A purpose-built OPNsense plugin for APC Back-UPS units connected over USB,
-developed and battle-tested on an **APC Back-UPS BK650M2-CH** running
-OPNsense 26.1 / FreeBSD 14.3. It drives the UPS through
-[Network UPS Tools](https://networkupstools.org/) (`nut`, `usbhid-ups`
-driver) and adds the operational glue that generic NUT front-ends lack:
-a self-healing watchdog, tolerant status parsing, a Chinese-first UI with
-e-mail / WeCom / SMS notifications, an NUT server mode for LAN clients,
-and a dashboard widget.
+**简体中文** | [English](README.en.md)
 
-> **Why this plugin?** The official `os-nut` plugin generates configurations
-> that can fail to start on APC USB units (missing `port=auto`), and `upsc`
-> on this platform intermittently segfaults after printing its data
-> ([opnsense/plugins#5509](https://github.com/opnsense/plugins/issues/5509)).
-> On several APC firmwares the USB HID interface itself also wedges every
-> few days — driver restarts do not recover it, only a bus-level USB reset
-> does. This plugin was built to survive all three. It is not a replacement
-> for the `nut` package — it manages NUT for you.
+</div>
 
-**Table of contents**
+# os-apcups-bk650m2 — APC UPS 专用 OPNsense 插件
 
-1. [Features](#features)
-2. [Requirements](#requirements)
-3. [Quick start](#quick-start)
-4. [What gets installed where](#what-gets-installed-where)
-5. [Configuration](#configuration)
-6. [UPS Server (NUT server mode)](#ups-server-nut-server-mode)
-7. [Watchdog self-healing](#watchdog-self-healing)
-8. [Dashboard widget](#dashboard-widget)
-9. [Diagnostics & troubleshooting](#diagnostics--troubleshooting)
-10. [Building the .txz package](#building-the-txz-package)
-11. [Compatibility](#compatibility)
-12. [FAQ](#faq)
-13. [中文说明](#中文说明)
-14. [License](#license)
+一个为 USB 连接的 APC Back-UPS 打造的 OPNsense 专用插件，在 **APC Back-UPS
+BK650M2-CH + OPNsense 26.1 / FreeBSD 14.3** 上长期开发实测。底层通过
+[Network UPS Tools](https://networkupstools.org/)（`nut`，`usbhid-ups`
+驱动）驱动 UPS，并补齐通用 NUT 前端缺失的运维能力：自愈 watchdog、
+容错的状态解析、全中文界面、邮件 / 企业微信 / 短信通知、面向局域网客户端的
+NUT 服务模式，以及仪表盘小组件。
 
-## Features
+> **为什么要做这个插件？** 官方 `os-nut` 插件生成的配置在 APC USB 设备上可能
+> 无法启动（缺少 `port=auto`），且该平台的 `upsc` 会在输出数据后随机段错误
+> （[opnsense/plugins#5509](https://github.com/opnsense/plugins/issues/5509)）。
+> 此外部分 APC 固件的 USB HID 接口每隔几天就会死锁一次——重启驱动无效，只有
+> 总线级 USB 重置能恢复。本插件为同时扛住这三个问题而生。它不替代 `nut`
+> 软件包，而是替你管好 NUT。
 
-- **Status page** — connection state, UPS status, battery charge, runtime,
-  load, input voltage, model and serial; auto-refresh every 10 s.
-- **Diagnostics page** — one click collects `upsc` output, NUT service
-  status, USB device tree, NUT config files, MONITOR lines and the last
-  80 UPS-related syslog lines.
-- **Shutdown policies** — disabled / on low battery / at a battery-charge
-  percentage / after N seconds on battery.
-- **Notifications** — e-mail (SMTP, SSL/STARTTLS), WeCom (企业微信) bot and
-  app messages, Alibaba Cloud SMS or a custom HTTP endpoint, with a
-  test-send button per channel.
-- **UPS Server mode** — expose the UPS on TCP 3493 to LAN clients
-  (Synology DSM, Proxmox, WinNUT, any NUT secondary) with a dedicated
-  read-only account. The firewall stays the master and performs the final
-  powerdown.
-- **Watchdog self-healing** — every 2 minutes a cron job probes the UPS and
-  escalates on failure: soft restart → **bus-level USB reset** → forced
-  driver restart (see [Watchdog](#watchdog-self-healing)).
-- **Dashboard widget** — Lobby widget (JS) plus a legacy PHP widget,
-  showing UPS state and battery charge.
+**目录**
 
-## Requirements
+1. [功能特性](#功能特性)
+2. [环境要求](#环境要求)
+3. [快速开始](#快速开始)
+4. [安装了哪些文件](#安装了哪些文件)
+5. [配置说明](#配置说明)
+6. [UPS Server（NUT 网络服务）](#ups-servernut-网络服务)
+7. [Watchdog 自愈](#watchdog-自愈)
+8. [仪表盘小组件](#仪表盘小组件)
+9. [诊断与排障](#诊断与排障)
+10. [构建 .txz 包](#构建-txz-包)
+11. [兼容性](#兼容性)
+12. [常见问题](#常见问题)
+13. [许可证](#许可证)
 
-- OPNsense 24.x or later (developed and tested on 26.1 / FreeBSD 14.3)
-- The `nut` package (installed automatically when built as a package;
-  for the dev install see [Quick start](#quick-start))
-- An APC UPS on USB — default vendor ID `051d`; other USB HID brands work
-  by changing the VendorID setting
-- **Do not** run it alongside the official `os-nut` plugin — both manage
-  `/usr/local/etc/nut/*`
+## 功能特性
 
-## Quick start
+- **状态页** — 连接状态、UPS 状态、电量、续航、负载、输入电压、型号与序列号，
+  每 10 秒自动刷新（浏览器标签页不可见时自动暂停）。
+- **诊断页** — 一键收集 `upsc` 输出、NUT 服务状态、USB 设备树、NUT 配置文件、
+  MONITOR 行和最近 80 行 UPS 相关系统日志。
+- **关机策略** — 不关机 / 低电量关机 / 电量降到指定百分比关机 / 电池供电 N 秒后关机。
+- **通知** — 邮件（SMTP，SSL/STARTTLS）、企业微信机器人与应用消息、阿里云短信
+  或自定义 HTTP 接口，每个渠道可单独测试发送。
+- **UPS Server 模式** — 通过 TCP 3493 向局域网客户端（群晖 DSM、Proxmox、
+  WinNUT 及任何 NUT 从机）开放 UPS，使用独立只读账号；防火墙保持 master，
+  负责最终断电。
+- **Watchdog 自愈** — 每分钟 cron 探测 UPS，失败后按
+  **总线级 USB 重置** → 软重启 → 深度重启逐级恢复（见 [Watchdog 自愈](#watchdog-自愈)）。
+- **仪表盘小组件** — Lobby JS 小组件 + 旧版 PHP 小组件，显示 UPS 状态与电量。
 
-1. Uninstall or disable `os-nut` if it is installed
-   (**System → Firmware → Plugins**).
-2. Copy this repository to your OPNsense box, e.g. `/root/opnsense-apcups-bk650m2`,
-   then from SSH/console:
+## 环境要求
+
+- OPNsense 24.x 及以上（开发实测：26.1 / FreeBSD 14.3）
+- `nut` 软件包（构建为 .txz 包安装时自动带入；开发安装见[快速开始](#快速开始)）
+- USB 连接的 APC UPS — 默认 VendorID `051d`；其他 USB HID 品牌改 VendorID 即可
+- **不要**与官方 `os-nut` 插件同时启用 — 两者都会写 `/usr/local/etc/nut/*`
+
+## 快速开始
+
+1. 如已安装 `os-nut`，先卸载或停用（**系统 → 固件 → 插件**）。
+2. 把本仓库拷贝到 OPNsense，例如 `/root/opnsense-apcups-bk650m2`，然后 SSH 执行：
 
    ```sh
-   pkg install -y nut          # dev install must provide the NUT package
+   pkg install -y nut          # 开发安装需自备 NUT 软件包
    cd /root/opnsense-apcups-bk650m2
    sh install-dev.sh
    ```
 
-   `install-dev.sh` copies the plugin files into `/usr/local/opnsense`,
-   restarts configd, renders the NUT templates, clears the menu caches and
-   restarts the web UI. `uninstall-dev.sh` removes everything again.
-3. Open `https://<opnsense-host>/ui/apcups/`, tick **启用**, review the
-   defaults and press Save. The status page should show 在线 within seconds.
+   `install-dev.sh` 会把插件文件复制到 `/usr/local/opnsense`、重启 configd、
+   渲染 NUT 模板、清理菜单缓存并重启 Web UI。`uninstall-dev.sh` 可整体卸载。
+3. 打开 `https://<opnsense-host>/ui/apcups/`，勾选**启用**，确认默认值后保存。
+   状态页应在数秒内显示"在线"。
 
-When built as a proper package (`os-apcups-bk650m2-x.y.z.txz`, see
-[below](#building-the-txz-package)) the `nut` dependency is pulled in
-automatically.
+构建为正式包（`os-apcups-bk650m2-x.y.z.txz`，见[下文](#构建-txz-包)）时会自动
+带入 `nut` 依赖。
 
-## What gets installed where
+## 安装了哪些文件
 
-| Location | Purpose |
+| 位置 | 用途 |
 |---|---|
-| `/usr/local/opnsense/mvc/app/{models,controllers,views}/OPNsense/ApcUps/` | Model, REST API controllers, forms and the page view |
-| `/usr/local/opnsense/service/conf/actions.d/actions_apcupsbk650m2.conf` | configd actions (`start/stop/restart/force-restart/reset-usb/status/diagnostics`) |
-| `/usr/local/opnsense/scripts/apcupsbk650m2/` | Backend scripts: `status.php`, `diagnostics.php`, `service.sh`, `watchdog.sh`, `upssched-cmd.sh`, `notify.py`, `battery_check.py` |
-| `/usr/local/opnsense/service/templates/OPNsense/ApcUps/` | Config templates, rendered by `configctl template reload OPNsense/ApcUps` |
-| `/usr/local/opnsense/www/js/widgets/ApcUps.js` (+ `Metadata/`) | Dashboard widget |
-| `/usr/local/www/widgets/widgets/apcups.widget.php` | Legacy dashboard widget |
+| `/usr/local/opnsense/mvc/app/{models,controllers,views}/OPNsense/ApcUps/` | 模型、REST API 控制器、表单与页面视图 |
+| `/usr/local/opnsense/service/conf/actions.d/actions_apcupsbk650m2.conf` | configd 动作（`start/stop/restart/force-restart/reset-usb/status/diagnostics`） |
+| `/usr/local/opnsense/scripts/apcupsbk650m2/` | 后端脚本：`status.php`、`diagnostics.php`、`service.sh`、`watchdog.sh`、`upssched-cmd.sh`、`notify.py`、`battery_check.py` |
+| `/usr/local/opnsense/service/templates/OPNsense/ApcUps/` | 配置模板，由 `configctl template reload OPNsense/ApcUps` 渲染 |
+| `/usr/local/opnsense/www/js/widgets/ApcUps.js`（含 `Metadata/`） | 仪表盘小组件 |
+| `/usr/local/www/widgets/widgets/apcups.widget.php` | 旧版仪表盘小组件 |
 
-The templates render the live configuration:
+模板渲染出的运行配置：
 
-| Rendered file | Content |
+| 渲染文件 | 内容 |
 |---|---|
-| `/etc/rc.conf.d/nut`, `/etc/rc.conf.d/nut_upsmon` | rc enable flags |
-| `/usr/local/etc/nut/nut.conf` | NUT mode (`standalone` / `none`) |
-| `/usr/local/etc/nut/ups.conf` | Driver section: `usbhid-ups`, `port=auto`, `user=root`, `pollonly`, `pollinterval=15`, low-battery overrides |
-| `/usr/local/etc/nut/upsd.conf` | LISTEN addresses, `MAXAGE 60` |
-| `/usr/local/etc/nut/upsd.users` | Monitor accounts (master, plus the UPS Server client account) |
-| `/usr/local/etc/nut/upsmon.conf` | MONITOR line, shutdown command, notify flags, `DEADTIME 45` |
-| `/usr/local/etc/nut/upssched.conf` | Event timers (power events, connection debounce, shutdown timers) |
-| `/usr/local/opnsense/scripts/apcupsbk650m2/notify.conf` | JSON consumed by `notify.py` |
-| `/etc/cron.d/apcups-bk650m2` | Watchdog schedule (every 2 minutes) |
+| `/etc/rc.conf.d/nut`、`/etc/rc.conf.d/nut_upsmon` | rc 启用开关 |
+| `/usr/local/etc/nut/nut.conf` | NUT 模式（`standalone` / `none`） |
+| `/usr/local/etc/nut/ups.conf` | 驱动段：`usbhid-ups`、`port=auto`、`user=root`、`pollonly`、`pollinterval=15`、低电量阈值覆写 |
+| `/usr/local/etc/nut/upsd.conf` | LISTEN 地址、`MAXAGE 60` |
+| `/usr/local/etc/nut/upsd.users` | 监控账号（master，及 UPS Server 客户端账号） |
+| `/usr/local/etc/nut/upsmon.conf` | MONITOR 行、关机命令、通知标志、`DEADTIME 45` |
+| `/usr/local/etc/nut/upssched.conf` | 事件定时器（电力事件、掉线防抖、关机定时器） |
+| `/usr/local/opnsense/scripts/apcupsbk650m2/notify.conf` | `notify.py` 消费的 JSON 配置 |
+| `/etc/cron.d/apcups-bk650m2` | Watchdog 调度（每分钟） |
 
-## Configuration
+## 配置说明
 
-### General (设置页)
+### 通用（设置页）
 
-| Field | Default | Notes |
+| 字段 | 默认值 | 说明 |
 |---|---|---|
-| 启用 | on | Master switch; renders all NUT configs |
-| UPS 名称 | `BK650M2` | NUT device name used by upsc/upsmon |
-| 驱动 | `usbhid-ups` | Keep for APC USB units |
-| 端口 | `auto` | **Must be `auto`** for USB — this is the setting os-nut misses |
-| 监控用户名 / 密码 | `monuser` / `apcupsbk650m2` | Local NUT master account |
-| USB VendorID | `051d` | APC; other USB HID vendors can be entered |
-| UPS Server / 客户端用户名 / 密码 | off / `upsclient` / – | See [UPS Server](#ups-server-nut-server-mode) |
+| 启用 | 开 | 总开关；控制所有 NUT 配置的渲染 |
+| UPS 名称 | `BK650M2` | upsc/upsmon 使用的 NUT 设备名 |
+| 驱动 | `usbhid-ups` | APC USB 设备保持默认 |
+| 端口 | `auto` | USB 场景**必须是 `auto`**——这正是 os-nut 缺失的配置 |
+| 监控用户名 / 密码 | `monuser` / `apcupsbk650m2` | 本机 NUT master 账号 |
+| USB VendorID | `051d` | APC；其他 USB HID 厂商可修改 |
+| UPS Server / 客户端用户名 / 密码 | 关 / `upsclient` / – | 见 [UPS Server](#ups-servernut-网络服务) |
 
-### Shutdown policies (关机策略)
+### 关机策略
 
-| Mode | Behaviour |
+| 模式 | 行为 |
 |---|---|
-| 不关机 | Monitor and notify only |
-| UPS 低电量时关机 | Shutdown when the UPS reports low battery (`override.battery.*.low`) |
-| 电量降到指定百分比后关机 | `battery_check.py` triggers `upsmon -c fsd` at the threshold |
-| 电池供电 N 秒后关机 | `upssched` timer starts on battery, cancelled when mains returns |
+| 不关机 | 只监控和通知 |
+| UPS 低电量时关机 | UPS 上报低电量时关机（`override.battery.*.low`） |
+| 电量降到指定百分比后关机 | 电池供电期间每分钟检查一次，达到阈值触发 `upsmon -c fsd` |
+| 电池供电 N 秒后关机 | `upssched` 进入电池供电时启动定时器，来电即取消 |
 
-### Notifications (通知页)
+### 通知（通知页）
 
-Pick any combination of channels; each has a **test-send button**:
+各渠道可任意组合，每个渠道都有**测试发送按钮**：
 
-- **E-mail** — SMTP host/port; port 465 uses implicit SSL, 587/25 use
-  STARTTLS. QQ/163 mailboxes need an app-specific 授权码, and the sender
-  address must match the SMTP username.
-- **企业微信机器人** — webhook URL.
-- **企业微信应用** — CorpID / CorpSecret / AgentId / touser.
-- **SMS** — Alibaba Cloud (sign + template) or a custom JSON HTTP endpoint.
-- **电量阈值通知** — one-shot alert while on battery below a percentage.
-- **启用掉线通知** — master switch for connection events
-  (COMMBAD / COMMOK / NOCOMM and watchdog recoveries). When off, recovery
-  still runs — only the push messages are silenced.
+- **邮件** — SMTP 主机/端口；465 端口走隐式 SSL，587/25 走 STARTTLS。
+  QQ/163 邮箱需要授权码，且发件人地址必须与 SMTP 用户名一致。
+- **企业微信机器人** — Webhook 地址。
+- **企业微信应用** — CorpID / CorpSecret / AgentId / 接收用户。
+- **短信** — 阿里云（签名 + 模板）或自定义 JSON HTTP 接口。
+- **电量阈值通知** — 电池供电期间每分钟检查一次，低于阈值发送一次告警。
+- **启用掉线通知** — 连接类事件（COMMBAD / COMMOK / NOCOMM 与 watchdog 恢复）
+  的总开关。关闭后自动恢复照常运行，只是不再推送。
 
-Connection alerts are **debounced**: a drop that self-recovers within the
-grace period (掉线通知宽限期, default 120 s, range 30–3600 s) never sends a
-notification; a sustained outage sends exactly one alert. All messages go
-through one dispatcher (`notify.py`), and the whole notification config is
-just the rendered JSON file `notify.conf`.
+掉线通知**全路径防抖**：upssched 防抖定时器、watchdog、NOCOMM 三条路径都遵守
+"掉线通知宽限期"（默认 120 秒，可配 30–3600 秒）。宽限期内自愈或被修复的掉线
+**一条通知都不会发**；持续掉线在告警发送前还会做一次"仍然断连"复核。每次掉线
+最多一组"告警 + 恢复"通知（三条告警路径共享标志文件，绝不重复）。BK650M2 固件
+死锁通常 2-3 分钟内即被自动修复，若不想被打扰可把宽限期调到 600。所有消息经
+统一分发器 `notify.py` 发送，整套通知配置就是渲染出的 JSON 文件 `notify.conf`
+（相关输入字段已做字符校验，杜绝配置值破坏 JSON）。
 
-## UPS Server (NUT server mode)
+## UPS Server（NUT 网络服务）
 
-Let NAS/VM hosts shut down gracefully from this UPS — the firewall is the
-NUT *master* (owns the USB device and the final powerdown), clients are
-*secondaries*.
+让 NAS / 虚拟化主机从这台 UPS 优雅关机——防火墙是 NUT *master*（独占 USB
+设备和最终断电），客户端是 *secondary*。
 
-1. **设置页** → tick **启用 UPS 网络服务（UPS Server）**, set a client
-   password, Save. upsd now listens on `0.0.0.0`/`::` port 3493.
-2. **Firewall → Rules**: allow TCP 3493 from the interface/subnet your
-   clients sit on.
-3. Configure the clients as *netclient* / secondary:
+1. **设置页** → 勾选**启用 UPS 网络服务（UPS Server）**，设置客户端密码并保存。
+   upsd 开始监听 `0.0.0.0`/`::` 的 3493 端口。
+2. **防火墙 → 规则**：放行客户端所在接口/子网到本机 TCP 3493。
+3. 客户端按 *netclient* / 从机模式配置：
 
-| Client | Where |
+| 客户端 | 位置 |
 |---|---|
-| Synology DSM | 控制面板 → 硬件和电源 → UPS → 启用 UPS 支持，类型选“Synology NUT 服务器”，填防火墙 IP 和客户端账号 |
-| Proxmox VE | `nut-client` package, `MODE=netclient` + `MONITOR` line |
+| 群晖 DSM | 控制面板 → 硬件和电源 → UPS → 启用 UPS 支持，类型选“Synology NUT 服务器”，填防火墙 IP 和客户端账号 |
+| Proxmox VE | `nut-client` 包，`MODE=netclient` + `MONITOR` 行 |
 | Windows | [WinNUT-Client](https://github.com/nutdotnet/WinNUT-client) |
 
-   Generic NUT client line: `MONITOR <upsname>@<firewall-ip> 1 <user> <pass> slave`
+   通用 NUT 客户端配置行：`MONITOR <ups名>@<防火墙IP> 1 <用户> <密码> slave`
 
-4. Verify from the client: `upsc BK650M2@<firewall-ip>`.
+4. 客户端验证：`upsc BK650M2@<防火墙IP>`。
 
-Security model: NUT allows anonymous *reads* by default (standard NUT
-behaviour — status values are not sensitive), but registering a monitoring
-session (`LOGIN`) requires the client account, and privileged commands
-(`MASTER`, instant commands) are only available to the firewall's local
-master account — **LAN clients can watch the UPS but can never shut your
-firewall down**. Credential files are rendered `root:nut 0640`. If the
-client password is empty, the client account is not generated at all and
-local monitoring keeps working.
+安全模型：NUT 默认允许匿名**读取**（标准行为——状态值不敏感），但注册监控会话
+（`LOGIN`）需要客户端账号，特权命令（`MASTER`、即时命令）只有防火墙本机
+master 账号可用——**局域网客户端只能看，永远关不了你的防火墙**。凭据文件渲染为
+`root:nut 0640`；客户端密码留空时完全不生成客户端账号，本机监控不受影响。
 
-## Watchdog self-healing
+## Watchdog 自愈
 
-The BK650M2 (like several APC firmwares) periodically wedges its USB HID
-interface: the device stays on the bus, `usbhid-ups` keeps running, but
-even the device descriptor becomes unreadable and only a bus-level reset
-recovers it. Field data from one unit: 7 wedges in 10 days, driver
-restarts recovered 0 of them, USB reset recovered 7/7. The watchdog is
-built around that reality:
+BK650M2（以及不少 APC 固件）的 USB HID 接口会周期性死锁：设备还在总线上、
+`usbhid-ups` 进程还活着，但连设备描述符都读不出来，只有总线级重置能恢复。
+实测数据：一台设备 10 天死锁 7 次，重启驱动 0 次成功，USB 重置 7/7 恢复。
+watchdog 就是围绕这个现实设计的：
 
-1. A cron job runs `watchdog.sh` **every 2 minutes**. A healthy probe is a
-   single `upsc … ups.status` (3 quick retries, output-parsed, tolerant of
-   the platform's `upsc` segfault).
-2. **3 consecutive failed runs (~6 minutes)** trigger the escalation:
-   `service.sh restart` (soft — keeps the driver running) →
-   `service.sh reset-usb` (stops NUT, `usbconfig … reset` on the APC
-   device) → `service.sh force-restart` (driver fully stopped and
-   restarted) as the last resort.
-3. Every step is logged (`logger -t apcups-bk650m2`, visible in **System
-   Log → System → Log Files**), and notifications are sent on alert and
-   recovery (respecting the 掉线通知 switch, with a 15-minute cooldown).
+1. cron 每分钟运行一次 `watchdog.sh`。健康探测是一次 `upsc … ups.status`
+   （3 次快速重试、解析输出内容而非退出码，兼容平台的 `upsc` 段错误）。
+2. **连续 3 次失败（约 2-3 分钟）** 触发恢复，顺序按实测数据排列：
+   `service.sh reset-usb`（停 NUT + `usbconfig … reset`，实测 7/7 有效）→
+   `service.sh restart`（软重启，不动驱动）→ `service.sh force-restart`
+   （驱动完全重启）兜底。带运行锁，恢复序列跨 cron 周期时不会并发。
+3. 每一步都写系统日志（`logger -t apcups-bk650m2`，在 **报告 → 系统日志** 可查），
+   告警与恢复通知遵守[掉线通知](#通知通知页)策略。
 
-State files live in `/var/db/nut/` (`apcups_watchdog_failures`,
-`apcups_watchdog_last_alert`). Expected outage per wedge is roughly
-6–7 minutes from drop to full recovery.
+状态文件位于 `/var/db/nut/`（`apcups_watchdog_failures`、
+`apcups_watchdog_outage_start`、`apcups_watchdog_last_alert`、
+`apcups_comm_alert_sent`）。典型死锁从掉线到恢复约 **3 分钟**。
 
-## Dashboard widget
+电池供电期间，watchdog 还会每分钟执行一次 `battery_check.py`：电量阈值告警
+（每次掉电最多一次）与"电量降到指定百分比关机"策略都由它驱动。
 
-Add the "APC UPS BK650M2" widget from the Lobby dashboard — first line
-shows UPS state (在线/电池供电/离线), second line the battery charge. The
-legacy PHP widget (`src/www/widgets/`) is included for older dashboards.
+## 仪表盘小组件
 
-## Diagnostics & troubleshooting
+在 Lobby 仪表盘添加"APC UPS BK650M2"小组件——第一行显示 UPS 状态
+（在线/电池供电/离线），第二行显示电量。旧版 PHP 小组件
+（`src/www/widgets/`）供旧版面板使用。
 
-The 诊断 tab (or `configctl apcupsbk650m2 diagnostics BK650M2@localhost`)
-collects everything in one shot: `upsc`, `service nut status`,
-`service nut_upsmon status`, `usbconfig`, NUT config files, the MONITOR
-line and the last 80 UPS-related syslog lines.
+## 诊断与排障
 
-| Symptom | Likely cause / fix |
+诊断页（或 `configctl apcupsbk650m2 diagnostics BK650M2@localhost`）一键收集：
+`upsc`、`service nut status`、`service nut_upsmon status`、`usbconfig`、
+NUT 配置文件、MONITOR 行和最近 80 行 UPS 相关系统日志。
+
+| 症状 | 可能原因 / 处理 |
 |---|---|
-| nut fails: "you must specify a port name" | 端口 must be `auto` (Settings → 端口), then Save and 重启 NUT |
-| `upsc` prints data then crashes ("signal 11") | Known platform quirk ([#5509](https://github.com/opnsense/plugins/issues/5509)); harmless here — every internal caller parses output instead of exit codes |
-| Status flips between 已断开/已连接 | Normal during a firmware wedge; the watchdog will USB-reset within ~7 minutes, check the system log for `apcups-bk650m2` |
-| Driver start: "Can't claim USB device" / "No matching HID UPS found" | Kernel HID claim; try a loader.conf quirk: `hw.usb.quirk.0="0x051d 0x0002 0 0xffff UQ_HID_IGNORE"` (requires reboot; usually unnecessary) |
-| Notifications fail | Use the per-channel 测试 button on the 通知 page — it shows the raw backend error |
-| Both this plugin and os-nut installed | Uninstall os-nut; both write `/usr/local/etc/nut/*` |
+| nut 启动报 "you must specify a port name" | 端口必须是 `auto`（设置页 → 端口），保存后重启 NUT |
+| `upsc` 输出数据后崩溃（"signal 11"） | 平台已知问题（[#5509](https://github.com/opnsense/plugins/issues/5509)）；本插件无害——所有调用都解析输出而非退出码 |
+| 状态在 已断开/已连接 间跳动 | 固件死锁的典型表现；watchdog 约 3 分钟内 USB 重置恢复，可在系统日志搜 `apcups-bk650m2` |
+| 驱动启动报 "Can't claim USB device" / "No matching HID UPS found" | 内核 HID 抢占；可尝试 loader.conf quirk：`hw.usb.quirk.0="0x051d 0x0002 0 0xffff UQ_HID_IGNORE"`（需重启，通常用不着） |
+| 通知发送失败 | 用通知页对应渠道的测试按钮——会显示后端原始错误 |
+| 本插件与 os-nut 同时安装 | 卸载 os-nut；两者都写 `/usr/local/etc/nut/*` |
 
-## Building the .txz package
+## 构建 .txz 包
 
-The repository layout already matches the OPNsense plugins tree. Copy
-`sysutils/apcups-bk650m2` into a OPNsense plugins checkout
-(`/usr/plugins/sysutils/apcups-bk650m2`) and build with the standard
-OPNsense tools workflow; the package name will be
-`os-apcups-bk650m2-x.y.z.txz` (`Makefile` declares `PLUGIN_DEPENDS=nut`).
+仓库目录结构已符合 OPNsense plugins tree。把 `sysutils/apcups-bk650m2` 拷入
+OPNsense plugins 检出目录（`/usr/plugins/sysutils/apcups-bk650m2`），按标准
+OPNsense tools 流程构建即可，包名形如 `os-apcups-bk650m2-x.y.z.txz`
+（`Makefile` 声明 `PLUGIN_DEPENDS=nut`）。
 
-## Compatibility
+## 兼容性
 
-- Tested on: OPNsense 26.1.9 / FreeBSD 14.3-RELEASE, APC Back-UPS
-  BK650M2-CH (vendor `051d`, USB HID).
-- Any APC USB HID unit (Back-UPS / Smart-UPS with USB) should work with
-  the defaults; other USB HID vendors can set their VendorID.
-- Out of scope: SNMP, serial, multiple UPS units — this plugin is
-  deliberately focused on one local USB UPS.
+- 实测环境：OPNsense 26.1.9 / FreeBSD 14.3-RELEASE，APC Back-UPS BK650M2-CH
+  （vendor `051d`，USB HID）。
+- 任何 APC USB HID 设备（Back-UPS / Smart-UPS 带 USB）用默认配置应可直接使用；
+  其他 USB HID 厂商改 VendorID 即可。
+- 不在范围内：SNMP、串口、多 UPS——本插件刻意聚焦单台本地 USB UPS。
 
-## FAQ
+## 常见问题
 
-**Is a `upsc` segfault in my logs a problem?**
-No. On this platform `upsc` intermittently crashes after printing its
-data ([upstream issue](https://github.com/opnsense/plugins/issues/5509)).
-The plugin always runs it through `stdbuf -o0` and parses the output, so
-monitoring, watchdog and notifications are unaffected.
+**日志里 upsc 段错误要紧吗？**
+不要紧。该平台 `upsc` 会在输出数据后随机崩溃
+（[上游 issue](https://github.com/opnsense/plugins/issues/5509)）。
+本插件统一用 `stdbuf -o0` 运行并解析输出，监控、watchdog 和通知都不受影响。
 
-**Why does my UPS "disconnect" every few days?**
-That is the APC firmware USB wedge described above — a device-side
-firmware bug, not an OPNsense/NUT fault. The watchdog detects it in ~6
-minutes and recovers it automatically.
+**UPS 为什么每隔几天就"断开"一次？**
+就是上文说的 APC 固件 USB 死锁——设备端固件 bug，不是 OPNsense/NUT 的问题。
+watchdog 约 2-3 分钟发现、约 3 分钟内自动恢复。
 
-**Can I run this next to os-nut?**
-No. Both generate `/usr/local/etc/nut/*`.
+**能和 os-nut 一起装吗？**
+不能。两者都生成 `/usr/local/etc/nut/*`。
 
-**Does the UPS Server expose my UPS without authentication?**
-Reads are anonymous by default (standard NUT). Registering a session
-needs the client account, and nothing a LAN client can do will shut the
-firewall down.
+**UPS Server 会不会让 UPS 裸奔在网络上？**
+读取默认匿名（NUT 标准行为），注册监控会话需要客户端账号，而局域网客户端
+做任何操作都关不了防火墙。
 
-## 中文说明
+**插件界面支持跟随 OPNsense 语言切换吗？**
+目前界面为硬编码中文，暂不支持多语言切换（见 [English](README.en.md) 文档中的
+相同说明）。计划中的改进：改用 OPNsense 标准 gettext 机制，界面文字随系统
+语言自动切换。
 
-这是为 APC Back-UPS（USB 连接）打造的 OPNsense 专用插件，在 BK650M2-CH +
-OPNsense 26.1 上长期实测。底层使用 NUT（`usbhid-ups` 驱动），解决 os-nut
-在 APC USB 场景下的一系列实际问题：
-
-- os-nut 生成的配置缺少 `port=auto` 导致 NUT 无法启动，本插件默认带全；
-- 平台 `upsc` 命令输出数据后随机段错误（[opnsense/plugins#5509](https://github.com/opnsense/plugins/issues/5509)），本插件所有调用均
-  `stdbuf -o0` 并解析输出内容而非退出码；
-- 部分 APC 固件的 USB HID 接口每隔一两天会死锁，重启驱动无效、只有
-  总线级 USB 重置能恢复——watchdog 每 2 分钟探测，连续 3 次失败后按
-  “软重启 → USB 重置 → 深度重启”自动恢复，全程系统日志可查；
-- 掉线通知带防抖（默认 120 秒宽限期，闪断自愈不打扰），可在通知页关闭；
-- 通知渠道：邮件（465 SSL / 587 STARTTLS）、企业微信机器人/应用、
-  阿里云短信、自定义 HTTP，每个渠道可单独测试；
-- UPS Server 模式：开放 TCP 3493 给群晖/Proxmox/WinNUT 等从机客户端，
-  独立只读账号，防火墙保持 master 负责最终断电，局域网客户端无法触发关机；
-- 仪表盘小组件、诊断页一键收集信息、界面全中文。
-
-安装与开发细节见 [INSTALL.md](INSTALL.md)，完整设计记录与排查手册见
-[PROJECT_NOTES.md](PROJECT_NOTES.md)（均为中文）。
-
-## License
+## 许可证
 
 [BSD-2-Clause](LICENSE)

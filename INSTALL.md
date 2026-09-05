@@ -3,7 +3,7 @@
 当前项目包含两种安装路线：
 
 1. 开发版直接安装：适合现在在你的 OPNsense 上快速测试。
-2. 正式 `.txz` 包：需要 OPNsense/FreeBSD 构建环境生成 `os-apcups-bk650m2-2.1.0.txz`。
+2. 正式 `.txz` 包：需要 OPNsense/FreeBSD 构建环境生成 `os-apcups-bk650m2-2.2.2.txz`。
 
 ## 开发版直接安装
 
@@ -46,7 +46,7 @@ sh uninstall-dev.sh
 目标包名：
 
 ```text
-os-apcups-bk650m2-2.1.0.txz
+os-apcups-bk650m2-2.2.2.txz
 ```
 
 源码目录应放到 OPNsense plugins tree：
